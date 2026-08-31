@@ -618,3 +618,39 @@ const API_BASE_URL = 'https://allowance-backend-muqk.onrender.com/api';
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
   }
+
+  // In loadInitialState(), populate the child dropdown
+  function renderInitialState() {
+    const children = state.initial.children || [];
+    const options = children.length
+      ? children.map((c) => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('')
+      : '<option value="">No accounts available</option>';
+    
+    $('childSelect').innerHTML = options;
+  }
+
+  // Handle child login submission
+  async function handleChildLogin(event) {
+    event.preventDefault();
+    const childId = $('childSelect').value;
+    const pin = $('childPin').value.trim();
+
+    await runForm(event.currentTarget, async () => {
+      const dashboard = await callServer('getChildDashboard', childId, pin);
+      renderChildDashboard(dashboard);
+      showToast('Welcome, ' + dashboard.child.name + '!');
+    });
+  }
+
+  function renderChildDashboard(dashboard) {
+    ['setupView', 'parentLoginForm', 'parentDashboard', 'childLoginForm'].forEach(id => {
+      $(id).hidden = true;
+    });
+    $('childDashboard').hidden = false;
+
+    $('childAccountName').textContent = dashboard.child.name;
+    $('childBalance').textContent = formatMoney(dashboard.balanceCents);
+    
+    // Render child specific rows
+    renderChildLedgerRows($('childLedgerBody'), dashboard.transactions);
+  }

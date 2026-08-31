@@ -300,6 +300,68 @@
 
       <div id="toast" class="notification toast is-dark" role="status" aria-live="polite" hidden></div>
     </div>
+
+    <!-- Child Login View -->
+<form id="childLoginForm" class="box login-panel" hidden>
+  <div class="block">
+    <p class="eyebrow">Child Portal</p>
+    <h2 class="title is-4">Sign In</h2>
+  </div>
+  <div class="field">
+    <label class="label" for="childSelect">Select Account</label>
+    <div class="control">
+      <div class="select is-fullwidth">
+        <select id="childSelect" required></select>
+      </div>
+    </div>
+  </div>
+  <div class="field">
+    <label class="label" for="childPin">PIN</label>
+    <div class="control">
+      <input id="childPin" class="input" type="password" inputmode="numeric" minlength="4" maxlength="12" required>
+    </div>
+  </div>
+  <button type="submit" class="button is-primary is-fullwidth">Open Child Dashboard</button>
+  <button type="button" id="switchToParent" class="button is-text is-fullwidth mt-2">Parent Sign In</button>
+</form>
+
+<!-- Child Dashboard View -->
+<div id="childDashboard" class="parent-workspace" hidden>
+  <section class="box dashboard-hero">
+    <div>
+      <p class="eyebrow">Welcome</p>
+      <h2 id="childAccountName" class="title is-3">Child Name</h2>
+    </div>
+    <button id="childSignOut" type="button" class="button is-light">Sign Out</button>
+  </section>
+
+  <section class="box balance-box">
+    <div>
+      <p class="eyebrow">Available Balance</p>
+      <p id="childBalance" class="title is-1 balance-amount">$0.00</p>
+    </div>
+  </section>
+
+  <section class="box">
+    <div class="section-title">
+      <h2 class="title is-4">Recent Activity</h2>
+    </div>
+    <div class="table-container">
+      <table class="table is-fullwidth is-hoverable is-striped">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Detail</th>
+            <th class="money-cell">Amount</th>
+          </tr>
+        </thead>
+        <tbody id="childLedgerBody"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
     <script src="client.js"></script>
   </body>
 </html>
