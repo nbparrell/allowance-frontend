@@ -1,4 +1,5 @@
 const PARENT_SESSION_STORAGE_KEY = 'allowanceBankParentSession';
+const API_BASE_URL = 'https://allowance-backend-muqk.onrender.com/api';
 
   const state = {
     initial: null,
@@ -529,15 +530,53 @@ const PARENT_SESSION_STORAGE_KEY = 'allowanceBankParentSession';
     showToast(message, true);
   }
 
-  function callServer(method, ...args) {
-    return new Promise((resolve, reject) => {
-      const runner = google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler((error) => {
-          reject(new Error((error && error.message) || String(error)));
-        });
-      runner[method](...args);
+async function callServer(method, ...args) {
+    let endpoint = '';
+    let payload = {};
+
+    // Route the frontend method calls to the REST endpoints
+    if (method === 'getInitialState') {
+      const response = await fetch(API_BASE_URL + '/initial-state');
+      if (!response.ok) throw new Error('Server error');
+      return response.json();
+    } 
+    else if (method === 'initializeParentPin') {
+      endpoint = '/setup-parent-pin';
+      payload = { pin: args[0] };
+    }
+    else if (method === 'loginParent') {
+      // NOTE: You will need to add a /login endpoint to main.py
+      // if you haven't yet, or adjust this payload to match your setup.
+      endpoint = '/parent/login'; 
+      payload = { pin: args[0] };
+    }
+    else if (method === 'createChild') {
+      endpoint = '/parent/child/create';
+      payload = { pin: args[0], name: args[1], childPin: args[2] };
+    }
+    else if (method === 'setChildActive') {
+      // NOTE: Ensure this matches a route in main.py
+      endpoint = '/parent/child/active';
+      payload = { pin: args[0], childId: args[1], active: args[2] };
+    }
+    else if (method === 'updateChildPin') {
+      // NOTE: Ensure this matches a route in main.py
+      endpoint = '/parent/child/pin';
+      payload = { pin: args[0], childId: args[1], newPin: args[2] };
+    }
+    // ... add routing for recordParentPurchase, updateConfig, etc.
+
+    const response = await fetch(API_BASE_URL + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
+
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.detail || 'Server error');
+    }
+    return data;
   }
 
   let toastTimer = null;
