@@ -34,11 +34,17 @@ function bindEvents() {
   $('childTabBtn').addEventListener('click', () => setLoginMode('child'));
 
   // Menu button binding
-  $('appMenuButton').addEventListener('click', (event) => {
-    console.log('clicked');
-    event.stopPropagation();
-    setMenuOpen(!$('appMenuRoot').classList.contains('is-active'));
-    console.log('ending');
+document.addEventListener('click', (event) => {
+    const menuBtn = event.target.closest('#appMenuButton');
+    if (menuBtn) {
+      console.log('clicked');
+      event.stopPropagation();
+      setMenuOpen(!$('appMenuRoot').classList.contains('is-active'));
+      console.log('ending');
+      return;
+    }
+    
+    // ... rest of your handleDocumentClick logic
   });
 
   document.addEventListener('click', handleDocumentClick);
