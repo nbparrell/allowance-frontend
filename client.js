@@ -35,8 +35,10 @@ function bindEvents() {
 
   // Menu button binding
   $('appMenuButton').addEventListener('click', (event) => {
+    console.log('clicked');
     event.stopPropagation();
-    setMenuOpen(!$('appMenu').classList.contains('is-active'));
+    setMenuOpen(!$('appMenuRoot').classList.contains('is-active'));
+    console.log('ending');
   });
 
   document.addEventListener('click', handleDocumentClick);
