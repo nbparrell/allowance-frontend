@@ -1,0 +1,310 @@
+<!doctype html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Family Ledger</p>
+          <h1 class="title is-1">Allowance Bank</h1>
+        </div>
+
+        <div id="appMenuRoot" class="dropdown is-right app-menu" hidden>
+          <div class="dropdown-trigger">
+            <button id="appMenuButton" class="button is-light menu-button" type="button" aria-haspopup="true" aria-controls="appMenu" aria-label="Open menu">
+              <span class="hamburger-lines" aria-hidden="true"></span>
+              <span>Menu</span>
+            </button>
+          </div>
+          <div id="appMenu" class="dropdown-menu" role="menu">
+            <div class="dropdown-content">
+              <button type="button" class="dropdown-item menu-action" data-dialog="purchaseDialog">Record Purchase</button>
+              <button type="button" class="dropdown-item menu-action" data-dialog="adjustmentDialog">Add or Correct Money</button>
+              <button type="button" class="dropdown-item menu-action" data-dialog="addAccountDialog">Add Account</button>
+              <button type="button" class="dropdown-item menu-action" data-dialog="manageAccountsDialog">Manage Accounts</button>
+              <button type="button" class="dropdown-item menu-action" data-dialog="settingsDialog">Allowance Settings</button>
+              <a id="sheetLink" class="dropdown-item" href="#" target="_blank" rel="noopener" hidden>Open Ledger Sheet</a>
+              <hr class="dropdown-divider">
+              <button id="parentSignOut" type="button" class="dropdown-item menu-action">Sign Out</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section id="loadingView" class="box centered">
+          <span class="loader app-loader"></span>
+          <p class="has-text-grey has-text-weight-semibold">Loading</p>
+        </section>
+
+        <section id="setupView" class="box setup-panel" hidden>
+          <div class="block">
+            <p class="eyebrow">First Setup</p>
+            <h2 class="title is-4">Create Parent PIN</h2>
+          </div>
+          <form id="setupForm">
+            <div class="field">
+              <label class="label" for="setupPin">Parent PIN</label>
+              <div class="control">
+                <input id="setupPin" class="input" type="password" inputmode="numeric" autocomplete="new-password" minlength="4" maxlength="12" required>
+              </div>
+            </div>
+            <div class="field">
+              <label class="label" for="setupPinConfirm">Confirm PIN</label>
+              <div class="control">
+                <input id="setupPinConfirm" class="input" type="password" inputmode="numeric" autocomplete="new-password" minlength="4" maxlength="12" required>
+              </div>
+            </div>
+            <button type="submit" class="button is-primary is-fullwidth">Save PIN</button>
+          </form>
+        </section>
+
+        <section id="mainView" hidden>
+          <section id="parentTab">
+            <form id="parentLoginForm" class="box login-panel">
+              <div class="block">
+                <p class="eyebrow">Parent</p>
+                <h2 class="title is-4">Sign In</h2>
+              </div>
+              <div class="field">
+                <label class="label" for="parentPin">PIN</label>
+                <div class="control">
+                  <input id="parentPin" class="input" type="password" inputmode="numeric" autocomplete="current-password" minlength="4" maxlength="12" required>
+                </div>
+              </div>
+              <button type="submit" class="button is-primary is-fullwidth">Open Dashboard</button>
+            </form>
+
+            <div id="parentDashboard" class="parent-workspace" hidden>
+              <section class="box dashboard-hero">
+                <div>
+                  <p class="eyebrow">Parent Dashboard</p>
+                  <h2 class="title is-3">Allowance Overview</h2>
+                </div>
+                <p class="has-text-grey has-text-weight-semibold">Signed in</p>
+              </section>
+
+              <section class="summary-grid">
+                <article class="summary-card">
+                  <p class="eyebrow">Active Accounts</p>
+                  <p id="dashboardAccountCount" class="summary-value">0</p>
+                </article>
+                <article class="summary-card">
+                  <p class="eyebrow">Total Balance</p>
+                  <p id="dashboardTotalBalance" class="summary-value">$0.00</p>
+                </article>
+                <article class="summary-card">
+                  <p class="eyebrow">Monthly Amount</p>
+                  <p id="dashboardMonthlyAllowance" class="summary-value">$20.00</p>
+                </article>
+              </section>
+
+              <section class="app-section">
+                <div class="section-title">
+                  <div>
+                    <p class="eyebrow">Children</p>
+                    <h2 class="title is-4">Balances</h2>
+                  </div>
+                </div>
+                <div id="parentAccountCards" class="account-card-grid"></div>
+              </section>
+
+              <section class="box">
+                <div class="section-title">
+                  <div>
+                    <p class="eyebrow">Ledger</p>
+                    <h2 class="title is-4">Recent Activity</h2>
+                  </div>
+                </div>
+                <div class="table-container">
+                  <table class="table is-fullwidth is-hoverable is-striped">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Child</th>
+                        <th>Type</th>
+                        <th>Detail</th>
+                        <th class="money-cell">Amount</th>
+                        <th class="money-cell">Balance</th>
+                      </tr>
+                    </thead>
+                    <tbody id="parentLedgerBody"></tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          </section>
+        </section>
+      </main>
+
+      <div id="purchaseDialog" class="modal app-modal" hidden>
+        <div class="modal-background" data-close-dialog></div>
+        <form id="parentPurchaseForm" class="modal-card">
+          <header class="modal-card-head">
+            <p class="modal-card-title">Record Purchase</p>
+            <button type="button" class="delete" aria-label="close" data-close-dialog></button>
+          </header>
+          <section class="modal-card-body">
+            <div class="field">
+              <label class="label" for="parentPurchaseChild">Child</label>
+              <div class="control">
+                <div class="select is-fullwidth">
+                  <select id="parentPurchaseChild" required></select>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <label class="label" for="parentPurchaseAmount">Amount</label>
+              <div class="control">
+                <input id="parentPurchaseAmount" class="input" type="text" inputmode="decimal" placeholder="4.50" required>
+              </div>
+            </div>
+            <div class="field">
+              <label class="label" for="parentPurchaseDescription">Description</label>
+              <div class="control">
+                <input id="parentPurchaseDescription" class="input" type="text" maxlength="80" placeholder="Book">
+              </div>
+            </div>
+          </section>
+          <footer class="modal-card-foot">
+            <button type="submit" class="button is-primary">Deduct From Account</button>
+            <button type="button" class="button" data-close-dialog>Cancel</button>
+          </footer>
+        </form>
+      </div>
+
+      <div id="adjustmentDialog" class="modal app-modal" hidden>
+        <div class="modal-background" data-close-dialog></div>
+        <form id="adjustmentForm" class="modal-card">
+          <header class="modal-card-head">
+            <p class="modal-card-title">Add or Correct Money</p>
+            <button type="button" class="delete" aria-label="close" data-close-dialog></button>
+          </header>
+          <section class="modal-card-body">
+            <div class="field">
+              <label class="label" for="adjustmentChild">Child</label>
+              <div class="control">
+                <div class="select is-fullwidth">
+                  <select id="adjustmentChild" required></select>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <label class="label" for="adjustmentAmount">Amount</label>
+              <div class="control">
+                <input id="adjustmentAmount" class="input" type="text" inputmode="decimal" placeholder="+5.00 or -3.00" required>
+              </div>
+            </div>
+            <div class="field">
+              <label class="label" for="adjustmentDescription">Description</label>
+              <div class="control">
+                <input id="adjustmentDescription" class="input" type="text" maxlength="80" placeholder="Correction">
+              </div>
+            </div>
+          </section>
+          <footer class="modal-card-foot">
+            <button type="submit" class="button is-primary">Record Correction</button>
+            <button type="button" class="button" data-close-dialog>Cancel</button>
+          </footer>
+        </form>
+      </div>
+
+      <div id="addAccountDialog" class="modal app-modal" hidden>
+        <div class="modal-background" data-close-dialog></div>
+        <form id="addChildForm" class="modal-card">
+          <header class="modal-card-head">
+            <p class="modal-card-title">Add Account</p>
+            <button type="button" class="delete" aria-label="close" data-close-dialog></button>
+          </header>
+          <section class="modal-card-body">
+            <div class="field">
+              <label class="label" for="newChildName">Name</label>
+              <div class="control">
+                <input id="newChildName" class="input" type="text" maxlength="40" required>
+              </div>
+            </div>
+            <div class="field">
+              <label class="label" for="newChildPin">PIN</label>
+              <div class="control">
+                <input id="newChildPin" class="input" type="password" inputmode="numeric" minlength="4" maxlength="12" autocomplete="new-password" required>
+              </div>
+            </div>
+          </section>
+          <footer class="modal-card-foot">
+            <button type="submit" class="button is-primary">Add Account</button>
+            <button type="button" class="button" data-close-dialog>Cancel</button>
+          </footer>
+        </form>
+      </div>
+
+      <div id="manageAccountsDialog" class="modal app-modal" hidden>
+        <div class="modal-background" data-close-dialog></div>
+        <div class="modal-card">
+          <header class="modal-card-head">
+            <p class="modal-card-title">Manage Accounts</p>
+            <button type="button" class="delete" aria-label="close" data-close-dialog></button>
+          </header>
+          <section class="modal-card-body">
+            <div class="table-container">
+              <table class="table is-fullwidth is-hoverable">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th class="money-cell">Balance</th>
+                    <th>Controls</th>
+                  </tr>
+                </thead>
+                <tbody id="parentChildrenBody"></tbody>
+              </table>
+            </div>
+          </section>
+          <footer class="modal-card-foot">
+            <button type="button" class="button" data-close-dialog>Close</button>
+          </footer>
+        </div>
+      </div>
+
+      <div id="settingsDialog" class="modal app-modal" hidden>
+        <div class="modal-background" data-close-dialog></div>
+        <form id="configForm" class="modal-card">
+          <header class="modal-card-head">
+            <p class="modal-card-title">Allowance Settings</p>
+            <button type="button" class="delete" aria-label="close" data-close-dialog></button>
+          </header>
+          <section class="modal-card-body">
+            <div class="field">
+              <label class="label" for="monthlyAllowance">Monthly Amount</label>
+              <div class="control">
+                <input id="monthlyAllowance" class="input" type="text" inputmode="decimal" required>
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">Schedule</label>
+              <p class="readonly-value">1st of every month</p>
+            </div>
+            <div class="field">
+              <label class="label" for="currencyCode">Currency</label>
+              <div class="control">
+                <input id="currencyCode" class="input" type="text" maxlength="3" required>
+              </div>
+            </div>
+          </section>
+          <footer class="modal-card-foot">
+            <button type="submit" class="button is-primary">Save Settings</button>
+            <button type="button" class="button" data-close-dialog>Cancel</button>
+          </footer>
+        </form>
+      </div>
+
+      <div id="toast" class="notification toast is-dark" role="status" aria-live="polite" hidden></div>
+    </div>
+    <script src="client.js"></script>
+  </body>
+</html>
