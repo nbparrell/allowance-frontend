@@ -48,7 +48,7 @@ function bindEvents() {
   });
 }
 
-// Core view router
+// Core view router managing parent, child, and setup flows
 function switchView(activeId) {
   ['setupView', 'portalToggleNav', 'parentLoginForm', 'childLoginForm', 'parentDashboard', 'childDashboard'].forEach(id => {
     const el = $(id);
@@ -325,7 +325,7 @@ async function handleAddChild(event) {
     $('addChildForm').reset();
     renderParentDashboard();
     closeActiveDialog();
-    renderInitialState(); // Refresh child dropdown for login view
+    renderInitialState(); 
     showToast('Account added.');
   });
 }
@@ -702,3 +702,156 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+// In loadInitialState(), populate the child dropdown
+  function renderInitialState() {
+    const children = state.initial.children || [];
+    const options = children.length
+      ? children.map((c) => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('')
+      : '<option value="">No accounts available</option>';
+    
+    $('childSelect').innerHTML = options;
+  }
+
+  // Handle child login submission
+  async function handleChildLogin(event) {
+    event.preventDefault();
+    const childId = $('childSelect').value;
+    const pin = $('childPin').value.trim();
+
+    await runForm(event.currentTarget, async () => {
+      const dashboard = await callServer('getChildDashboard', childId, pin);
+      renderChildDashboard(dashboard);
+      showToast('Welcome, ' + dashboard.child.name + '!');
+    });
+  }
+
+  function renderChildDashboard(dashboard) {
+    ['setupView', 'parentLoginForm', 'parentDashboard', 'childLoginForm'].forEach(id => {
+      $(id).hidden = true;
+    });
+    $('childDashboard').hidden = false;
+
+    $('childAccountName').textContent = dashboard.child.name;
+    $('childBalance').textContent = formatMoney(dashboard.balanceCents);
+    
+    // Render child specific rows
+    renderChildLedgerRows($('childLedgerBody'), dashboard.transactions);
+  }
+
+  // Bind the toggle buttons and child login form in bindEvents()
+  function bindEvents() {
+    $('setupForm').addEventListener('submit', handleSetupSubmit);
+    $('parentLoginForm').addEventListener('submit', handleParentLogin);
+    $('childLoginForm').addEventListener('submit', handleChildLogin);
+    $('childSignOut').addEventListener('click', showSignedOut);
+    
+    // Toggle click listeners
+    $('parentTabBtn').addEventListener('click', () => setLoginMode('parent'));
+    $('childTabBtn').addEventListener('click', () => setLoginMode('child'));
+
+    // ... rest of your event bindings
+  }
+
+  // Expanded router to manage the toggle and views
+  function switchView(activeId) {
+    ['setupView', 'parentLoginForm', 'childLoginForm', 'parentDashboard', 'childDashboard', 'portalToggleNav'].forEach(id => {
+      const el = $(id);
+      if (el) el.hidden = true;
+    });
+
+    if (activeId === 'parentLogin') {
+      $('parentLoginForm').hidden = false;
+      $('portalToggleNav').hidden = false;
+      setLoginMode('parent');
+    } else if (activeId === 'childLogin') {
+      $('childLoginForm').hidden = false;
+      $('portalToggleNav').hidden = false;
+      setLoginMode('child');
+    } else {
+      const target = $(activeId);
+      if (target) target.hidden = false;
+    }
+  }
+
+  function setLoginMode(mode) {
+    const isParent = (mode === 'parent');
+    $('parentTabBtn').classList.toggle('is-active', isParent);
+    $('childTabBtn').classList.toggle('is-active', !isParent);
+    $('parentLoginForm').hidden = !isParent;
+    $('childLoginForm').hidden = isParent;
+  }
+
+  // Populate the child dropdown list from initial state data
+  function renderInitialState() {
+    const children = (state.initial && state.initial.children) || [];
+    const options = children.length
+      ? children.map((c) => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('')
+      : '<option value="">No accounts available</option>';
+    
+    $('childSelect').innerHTML = options;
+    $('childSelect').disabled = children.length === 0;
+    $('childLoginForm').querySelector('button[type="submit"]').disabled = children.length === 0;
+  }
+
+  async function handleChildLogin(event) {
+    event.preventDefault();
+    const childId = $('childSelect').value;
+    const pin = $('childPin').value.trim();
+
+    await runForm(event.currentTarget, async () => {
+      const dashboard = await callServer('getChildDashboard', childId, pin);
+      renderChildDashboard(dashboard);
+      showToast('Welcome, ' + dashboard.child.name + '!');
+    });
+  }
+
+  function renderChildDashboard(dashboard) {
+    ['setupView', 'parentLoginForm', 'childLoginForm', 'parentDashboard', 'portalToggleNav'].forEach(id => {
+      $(id).hidden = true;
+    });
+    $('childDashboard').hidden = false;
+    $('appMenuRoot').hidden = true;
+
+    $('childAccountName').textContent = dashboard.child.name;
+    $('childBalance').textContent = formatMoney(dashboard.balanceCents);
+    
+    renderChildLedgerRows($('childLedgerBody'), dashboard.transactions);
+  }
+
+  function renderChildLedgerRows(target, rows) {
+    if (!rows || rows.length === 0) {
+      target.innerHTML = `<tr><td class="empty-row has-text-centered has-text-grey" colspan="4">No activity</td></tr>`;
+      return;
+    }
+
+    target.innerHTML = rows
+      .map((row) => {
+        const amountClass = row.amountCents < 0
+          ? 'has-text-danger has-text-weight-bold'
+          : 'has-text-success has-text-weight-bold';
+        return `
+          <tr>
+            <td>${escapeHtml(row.timestamp)}</td>
+            <td>${formatType(row.type)}</td>
+            <td>${escapeHtml(row.description)}</td>
+            <td class="money-cell ${amountClass}">${formatSignedMoney(row.amountCents)}</td>
+          </tr>
+        `;
+      })
+      .join('');
+  }
+
+  // Update showSignedOut to fall back to the toggle screen instead of forced parent view
+  function showSignedOut() {
+    state.parentSessionToken = '';
+    state.parentSessionExpiresAt = '';
+    state.parentDashboard = null;
+    $('parentPin').value = '';
+    $('childPin').value = '';
+    
+    switchView('parentLogin');
+    $('appMenuRoot').hidden = true;
+    setMenuOpen(false);
+    closeActiveDialog();
+  }
