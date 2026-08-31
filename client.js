@@ -582,6 +582,10 @@ const API_BASE_URL = 'https://allowance-backend-muqk.onrender.com/api';
     else if (method === 'signOutParentSession') {
       return true; 
     }
+    else if (method === 'getChildDashboard') {
+      endpoint = '/child/dashboard';
+      payload = { childId: args[0], pin: args[1] };
+    }
 
     const response = await fetch(API_BASE_URL + endpoint, {
       method: 'POST',
