@@ -8,6 +8,11 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
+    <div id="globalLoader" class="loading-overlay" hidden>
+      <span class="loader app-loader"></span>
+      <p class="has-text-grey has-text-weight-semibold mt-3">Syncing...</p>
+    </div>
+
     <div class="app-shell">
       <header class="app-header">
         <div>
@@ -29,7 +34,6 @@
               <button type="button" class="dropdown-item menu-action" data-dialog="addAccountDialog">Add Account</button>
               <button type="button" class="dropdown-item menu-action" data-dialog="manageAccountsDialog">Manage Accounts</button>
               <button type="button" class="dropdown-item menu-action" data-dialog="settingsDialog">Allowance Settings</button>
-              <a id="sheetLink" class="dropdown-item" href="#" target="_blank" rel="noopener" hidden>Open Ledger Sheet</a>
               <hr class="dropdown-divider">
               <button id="parentSignOut" type="button" class="dropdown-item menu-action">Sign Out</button>
             </div>
@@ -38,11 +42,6 @@
       </header>
 
       <main>
-        <section id="loadingView" class="box centered">
-          <span class="loader app-loader"></span>
-          <p class="has-text-grey has-text-weight-semibold">Loading</p>
-        </section>
-
         <section id="setupView" class="box setup-panel" hidden>
           <div class="block">
             <p class="eyebrow">First Setup</p>
@@ -65,82 +64,78 @@
           </form>
         </section>
 
-        <section id="mainView" hidden>
-          <section id="parentTab">
-            <form id="parentLoginForm" class="box login-panel">
-              <div class="block">
-                <p class="eyebrow">Parent</p>
-                <h2 class="title is-4">Sign In</h2>
+        <form id="parentLoginForm" class="box login-panel" hidden>
+          <div class="block">
+            <p class="eyebrow">Parent</p>
+            <h2 class="title is-4">Sign In</h2>
+          </div>
+          <div class="field">
+            <label class="label" for="parentPin">PIN</label>
+            <div class="control">
+              <input id="parentPin" class="input" type="password" inputmode="numeric" autocomplete="current-password" minlength="4" maxlength="12" required>
+            </div>
+          </div>
+          <button type="submit" class="button is-primary is-fullwidth">Open Dashboard</button>
+        </form>
+
+        <div id="parentDashboard" class="parent-workspace" hidden>
+          <section class="box dashboard-hero">
+            <div>
+              <p class="eyebrow">Parent Dashboard</p>
+              <h2 class="title is-3">Allowance Overview</h2>
+            </div>
+            <p class="has-text-grey has-text-weight-semibold">Signed in</p>
+          </section>
+
+          <section class="summary-grid">
+            <article class="summary-card">
+              <p class="eyebrow">Active Accounts</p>
+              <p id="dashboardAccountCount" class="summary-value">0</p>
+            </article>
+            <article class="summary-card">
+              <p class="eyebrow">Total Balance</p>
+              <p id="dashboardTotalBalance" class="summary-value">$0.00</p>
+            </article>
+            <article class="summary-card">
+              <p class="eyebrow">Monthly Amount</p>
+              <p id="dashboardMonthlyAllowance" class="summary-value">$20.00</p>
+            </article>
+          </section>
+
+          <section class="app-section">
+            <div class="section-title">
+              <div>
+                <p class="eyebrow">Children</p>
+                <h2 class="title is-4">Balances</h2>
               </div>
-              <div class="field">
-                <label class="label" for="parentPin">PIN</label>
-                <div class="control">
-                  <input id="parentPin" class="input" type="password" inputmode="numeric" autocomplete="current-password" minlength="4" maxlength="12" required>
-                </div>
+            </div>
+            <div id="parentAccountCards" class="account-card-grid"></div>
+          </section>
+
+          <section class="box">
+            <div class="section-title">
+              <div>
+                <p class="eyebrow">Ledger</p>
+                <h2 class="title is-4">Recent Activity</h2>
               </div>
-              <button type="submit" class="button is-primary is-fullwidth">Open Dashboard</button>
-            </form>
-
-            <div id="parentDashboard" class="parent-workspace" hidden>
-              <section class="box dashboard-hero">
-                <div>
-                  <p class="eyebrow">Parent Dashboard</p>
-                  <h2 class="title is-3">Allowance Overview</h2>
-                </div>
-                <p class="has-text-grey has-text-weight-semibold">Signed in</p>
-              </section>
-
-              <section class="summary-grid">
-                <article class="summary-card">
-                  <p class="eyebrow">Active Accounts</p>
-                  <p id="dashboardAccountCount" class="summary-value">0</p>
-                </article>
-                <article class="summary-card">
-                  <p class="eyebrow">Total Balance</p>
-                  <p id="dashboardTotalBalance" class="summary-value">$0.00</p>
-                </article>
-                <article class="summary-card">
-                  <p class="eyebrow">Monthly Amount</p>
-                  <p id="dashboardMonthlyAllowance" class="summary-value">$20.00</p>
-                </article>
-              </section>
-
-              <section class="app-section">
-                <div class="section-title">
-                  <div>
-                    <p class="eyebrow">Children</p>
-                    <h2 class="title is-4">Balances</h2>
-                  </div>
-                </div>
-                <div id="parentAccountCards" class="account-card-grid"></div>
-              </section>
-
-              <section class="box">
-                <div class="section-title">
-                  <div>
-                    <p class="eyebrow">Ledger</p>
-                    <h2 class="title is-4">Recent Activity</h2>
-                  </div>
-                </div>
-                <div class="table-container">
-                  <table class="table is-fullwidth is-hoverable is-striped">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Child</th>
-                        <th>Type</th>
-                        <th>Detail</th>
-                        <th class="money-cell">Amount</th>
-                        <th class="money-cell">Balance</th>
-                      </tr>
-                    </thead>
-                    <tbody id="parentLedgerBody"></tbody>
-                  </table>
-                </div>
-              </section>
+            </div>
+            <div class="table-container">
+              <table class="table is-fullwidth is-hoverable is-striped">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Child</th>
+                    <th>Type</th>
+                    <th>Detail</th>
+                    <th class="money-cell">Amount</th>
+                    <th class="money-cell">Balance</th>
+                  </tr>
+                </thead>
+                <tbody id="parentLedgerBody"></tbody>
+              </table>
             </div>
           </section>
-        </section>
+        </div>
       </main>
 
       <div id="purchaseDialog" class="modal app-modal" hidden>

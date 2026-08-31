@@ -40,33 +40,34 @@ const API_BASE_URL = 'https://allowance-backend-muqk.onrender.com/api';
     });
   }
 
+  // Core routing: ensure only one structural screen is visible
+  function switchView(activeId) {
+    ['setupView', 'parentLoginForm', 'parentDashboard'].forEach(id => {
+      const el = $(id);
+      if (el) el.hidden = (id !== activeId);
+    });
+  }
+
   async function loadInitialState() {
+    setBusy(true);
     try {
       state.initial = await callServer('getInitialState');
-      renderInitialState();
-
       const storedSession = readStoredParentSession();
-      if (!state.initial.needsParentSetup && storedSession) {
+
+      if (state.initial.needsParentSetup) {
+        switchView('setupView');
+        $('appMenuRoot').hidden = true;
+      } else if (storedSession) {
         await resumeParentSession(storedSession);
+      } else {
+        showSignedOut();
       }
     } catch (error) {
       clearStoredParentSession();
       showSignedOut();
       handleError(error);
     } finally {
-      $('loadingView').hidden = true;
-    }
-  }
-
-  function renderInitialState() {
-    const needsSetup = state.initial.needsParentSetup;
-    $('setupView').hidden = !needsSetup;
-    $('mainView').hidden = needsSetup;
-    $('appMenuRoot').hidden = true;
-
-    if (state.initial.spreadsheetUrl) {
-      $('sheetLink').href = state.initial.spreadsheetUrl;
-      $('sheetLink').hidden = false;
+      setBusy(false);
     }
   }
 
@@ -82,8 +83,8 @@ const API_BASE_URL = 'https://allowance-backend-muqk.onrender.com/api';
     await runForm(event.currentTarget, async () => {
       state.initial = await callServer('initializeParentPin', pin);
       $('setupForm').reset();
-      renderInitialState();
-      showToast('Parent PIN saved.');
+      showSignedOut(); // Instantly switch to the sign in screen
+      showToast('Parent PIN saved. Please sign in.');
     });
   }
 
@@ -118,8 +119,8 @@ const API_BASE_URL = 'https://allowance-backend-muqk.onrender.com/api';
       return total + (Number(child.balanceCents) || 0);
     }, 0);
 
-    $('parentLoginForm').hidden = true;
-    $('parentDashboard').hidden = false;
+    // Apply the active view
+    switchView('parentDashboard');
     $('appMenuRoot').hidden = false;
 
     $('dashboardAccountCount').textContent = String(activeChildren.length);
@@ -372,8 +373,9 @@ const API_BASE_URL = 'https://allowance-backend-muqk.onrender.com/api';
     state.parentSessionExpiresAt = '';
     state.parentDashboard = null;
     $('parentPin').value = '';
-    $('parentLoginForm').hidden = false;
-    $('parentDashboard').hidden = true;
+    
+    // Fallback to strict login UI lock
+    switchView('parentLoginForm');
     $('appMenuRoot').hidden = true;
     setMenuOpen(false);
     closeActiveDialog();
@@ -518,7 +520,13 @@ const API_BASE_URL = 'https://allowance-backend-muqk.onrender.com/api';
   function setBusy(isBusy) {
     state.pending += isBusy ? 1 : -1;
     state.pending = Math.max(0, state.pending);
-    document.body.classList.toggle('busy', state.pending > 0);
+    const isWorking = state.pending > 0;
+    
+    document.body.classList.toggle('busy', isWorking);
+    
+    // Toggle the new visual overlay
+    const loader = $('globalLoader');
+    if (loader) loader.hidden = !isWorking;
   }
 
   function handleError(error) {
@@ -530,11 +538,10 @@ const API_BASE_URL = 'https://allowance-backend-muqk.onrender.com/api';
     showToast(message, true);
   }
 
-async function callServer(method, ...args) {
+  async function callServer(method, ...args) {
     let endpoint = '';
     let payload = {};
 
-    // Route the frontend method calls to the REST endpoints
     if (method === 'getInitialState') {
       const response = await fetch(API_BASE_URL + '/initial-state');
       if (!response.ok) throw new Error('Server error');
@@ -544,9 +551,7 @@ async function callServer(method, ...args) {
       endpoint = '/setup-parent-pin';
       payload = { pin: args[0] };
     }
-    else if (method === 'loginParent') {
-      // NOTE: You will need to add a /login endpoint to main.py
-      // if you haven't yet, or adjust this payload to match your setup.
+    else if (method === 'loginParent' || method === 'resumeParentSession') {
       endpoint = '/parent/login'; 
       payload = { pin: args[0] };
     }
@@ -555,16 +560,28 @@ async function callServer(method, ...args) {
       payload = { pin: args[0], name: args[1], childPin: args[2] };
     }
     else if (method === 'setChildActive') {
-      // NOTE: Ensure this matches a route in main.py
       endpoint = '/parent/child/active';
       payload = { pin: args[0], childId: args[1], active: args[2] };
     }
     else if (method === 'updateChildPin') {
-      // NOTE: Ensure this matches a route in main.py
       endpoint = '/parent/child/pin';
       payload = { pin: args[0], childId: args[1], newPin: args[2] };
     }
-    // ... add routing for recordParentPurchase, updateConfig, etc.
+    else if (method === 'updateConfig') {
+      endpoint = '/parent/config';
+      payload = { pin: args[0], monthlyAllowance: args[1].monthlyAllowance, currency: args[1].currency };
+    }
+    else if (method === 'recordParentPurchase') {
+      endpoint = '/parent/purchase';
+      payload = { pin: args[0], childId: args[1], amount: args[2], description: args[3] };
+    }
+    else if (method === 'recordAdjustment') {
+      endpoint = '/parent/adjustment';
+      payload = { pin: args[0], childId: args[1], amount: args[2], description: args[3] };
+    }
+    else if (method === 'signOutParentSession') {
+      return true; 
+    }
 
     const response = await fetch(API_BASE_URL + endpoint, {
       method: 'POST',
